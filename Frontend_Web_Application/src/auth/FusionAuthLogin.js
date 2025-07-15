@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useAuth } from "./AuthContext";
 
 /**
  * Configuration points: Set these values for your FusionAuth application.
@@ -25,19 +26,19 @@ function buildFusionAuthAuthorizeUrl() {
 
 // PUBLIC_INTERFACE
 function FusionAuthLogin() {
+  const { login } = useAuth();
+
   /** Handler to initiate the OAuth flow. */
   const handleLogin = () => {
     window.location.href = buildFusionAuthAuthorizeUrl();
   };
 
-  // If on the /auth/callback route, handle the code exchange and JWT storage.
+  // If on the /auth/callback route, handle the code exchange and JWT storage via context.
   useEffect(() => {
-    // Check if we're on the expected callback path.
     if (window.location.pathname === "/auth/callback") {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
       if (code) {
-        // Exchange the code for a JWT by calling the backend.
         fetch(BACKEND_TOKEN_VERIFY_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -49,11 +50,9 @@ function FusionAuthLogin() {
             return res.json();
           })
           .then((data) => {
-            // Store JWT in memory (Redux, React Context, or use a secure SameSite cookie via backend)
-            // Example below stores in localStorage for demo only - use in-memory or HTTP-only cookie for real apps!
             if (data && data.access_token) {
-              // TODO: Replace with in-memory store (Context/Redux) for enhanced security.
-              window.localStorage.setItem("access_token", data.access_token);
+              // Use AuthContext login action for secure app-wide management
+              login(data.access_token);
               window.location.href = "/";
             } else {
               alert("Authentication failed: No access token received.");
@@ -64,7 +63,7 @@ function FusionAuthLogin() {
           });
       }
     }
-  }, []);
+  }, [login]);
 
   // Render login button if not on callback path.
   if (window.location.pathname === "/auth/callback") {
@@ -105,8 +104,8 @@ export default FusionAuthLogin;
  * - Securely store JWT (prefer HTTP-only SameSite cookie set by backend, NOT localStorage for production!).
  * - Use an AuthProvider/context for full-featured session/user management in the app.
  *
- * TODO:
- * - Replace localStorage usage with safer method (Context or Redux).
- * - Add robust error handling and logout/session expiry support.
- * - Optionally, support refresh tokens and silent renewal.
+ * Usage:
+ * - AuthProvider wraps App to manage authentication state/context.
+ * - This component handles only UI and login/callback code flow.
+ * - Logout, session expiry, and secure API calls supported via AuthContext.
  */
