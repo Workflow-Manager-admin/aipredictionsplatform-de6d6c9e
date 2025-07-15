@@ -26,11 +26,24 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(!!getAccessToken());
   const [user, setUser] = useState(null); // Optional: Can be filled after decoding JWT or from backend
 
+  // Utility: Decode JWT payload (without verifying signature, for non-critical UX only)
+  function decodeJwtPayload(token) {
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) return null;
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
   // Load user info from token (decode or refetch from backend)
   useEffect(() => {
     if (accessToken) {
-      // Optionally decode JWT and set user info here.
-      // For simplicity, only mark as authenticated.
+      // Decode JWT to get user info like email/sub. Don't use for auth-critical logic.
+      const payload = decodeJwtPayload(accessToken);
+      setUser(payload);
       setIsAuthenticated(true);
     } else {
       setIsAuthenticated(false);
